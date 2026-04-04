@@ -8,12 +8,31 @@ import (
 	"testing"
 )
 
-func TestReaderAt(t *testing.T) {
-	b := make([]byte, 64)
+func makeB64(size int) (b []byte, b64 []byte) {
+	b = make([]byte, size)
 	for i := range len(b) {
 		b[i] = byte(i)
 	}
-	b64 := []byte(base64.StdEncoding.EncodeToString(b))
+	b64 = []byte(base64.StdEncoding.EncodeToString(b))
+	return b, b64
+}
+
+func BenchmarkAt(b *testing.B) {
+	for ex := range 13 {
+		kib := 1 << ex
+		b.Run(fmt.Sprintf("%dKiB", kib), func(b *testing.B) {
+			ogb, b64 := makeB64(kib * 1024)
+			at := At{bytes.NewReader(b64)}
+			buf := make([]byte, len(ogb)/4)
+			for b.Loop() {
+				at.ReadAt(buf, int64(len(ogb)/2))
+			}
+		})
+	}
+}
+
+func TestReaderAt(t *testing.T) {
+	b, b64 := makeB64(64)
 	buf := make([]byte, len(b)+5)
 	for extraLayers := range 10 {
 		var at io.ReaderAt
