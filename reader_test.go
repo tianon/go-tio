@@ -22,6 +22,8 @@ func TestReaderAt(t *testing.T) {
 				n, err := at.ReadAt(buf[:size], int64(off))
 				if err != nil && err != io.EOF {
 					t.Fatal(err)
+				} else if n != size && err != io.EOF {
+					t.Error("error should be io.EOF")
 				}
 				if n != len(exp) {
 					t.Errorf("%d != %d", n, len(exp))
