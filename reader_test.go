@@ -2,41 +2,34 @@ package b64reader
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"testing"
 )
 
 func TestReaderAt(t *testing.T) {
-	at := At{bytes.NewReader([]byte("AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="))} // 0x00, 0x01, 0x02, ..., 0x10, ..., 0x1F (32 bytes)
-	for _, td := range []struct {
-		p   []byte
-		off int64
-	}{
-		{[]byte{0}, 0},
-		{[]byte{1}, 1},
-		{[]byte{2}, 2},
-		{[]byte{3}, 3},
-		{[]byte{4}, 4},
-		{[]byte{8, 9}, 8},
-		{[]byte{30, 31}, 30},
-		{nil, 32},
-	} {
-		t.Run(fmt.Sprintf("%d-%d", td.off, len(td.p)), func(t *testing.T) {
-			buf := make([]byte, len(td.p))
-			if td.p == nil {
-				buf = make([]byte, 30)
-			}
-			n, err := at.ReadAt(buf, td.off)
-			if err != nil && err != io.EOF {
-				t.Fatal(err)
-			}
-			if n != len(td.p) {
-				t.Fatalf("%d != %d", n, len(td.p))
-			}
-			if !bytes.Equal(buf[:n], td.p) {
-				t.Fatalf("%v != %v", buf, td.p)
-			}
-		})
+	b := make([]byte, 64)
+	for i := range len(b) {
+		b[i] = byte(i)
+	}
+	at := At{bytes.NewReader([]byte(base64.StdEncoding.EncodeToString(b)))}
+	buf := make([]byte, len(b)+5)
+	for off := range len(b) + 1 { // +1 to make sure we test reading off the end
+		for size := range len(b) - off + 5 { // +5 to make sure we test reading way off the end at least one full base64 "chunk" or whatever it's called
+			exp := b[off:min(off+size, len(b))]
+			t.Run(fmt.Sprintf("%d+%d", off, size), func(t *testing.T) {
+				n, err := at.ReadAt(buf[:size], int64(off))
+				if err != nil && err != io.EOF {
+					t.Fatal(err)
+				}
+				if n != len(exp) {
+					t.Errorf("%d != %d", n, len(exp))
+				}
+				if !bytes.Equal(buf[:n], exp) {
+					t.Errorf("%v != %v", buf[:n], exp)
+				}
+			})
+		}
 	}
 }
