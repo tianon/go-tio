@@ -24,6 +24,8 @@ func TestReaderAt(t *testing.T) {
 					t.Fatal(err)
 				} else if n != size && err != io.EOF {
 					t.Error("error should be io.EOF")
+				} else if n == size && off + size == len(b) && err != io.EOF {
+					t.Log("error could be io.EOF but isn't")
 				}
 				if n != len(exp) {
 					t.Errorf("%d != %d", n, len(exp))
