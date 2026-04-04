@@ -14,21 +14,23 @@ func TestReaderAt(t *testing.T) {
 		b[i] = byte(i)
 	}
 	b64 := []byte(base64.StdEncoding.EncodeToString(b))
-	b64b64 := []byte(base64.StdEncoding.EncodeToString(b64))
 	buf := make([]byte, len(b)+5)
-	for _, td := range []struct {
-		name string
-		at   io.ReaderAt
-	}{
-		{name: "direct", at: At{bytes.NewReader(b64)}},
-		{name: "nested", at: At{At{bytes.NewReader(b64b64)}}},
-	} {
-		t.Run(td.name, func(t *testing.T) {
+	for extraLayers := range 10 {
+		var at io.ReaderAt
+		b64d := b64
+		for range extraLayers {
+			b64d = []byte(base64.StdEncoding.EncodeToString(b64d))
+		}
+		at = At{bytes.NewReader(b64d)}
+		for range extraLayers {
+			at = At{at}
+		}
+		t.Run(fmt.Sprintf("%d layers", 1+extraLayers), func(t *testing.T) {
 			for off := range len(b) + 1 { // +1 to make sure we test reading off the end
 				for size := range len(b) - off + 5 { // +5 to make sure we test reading way off the end at least one full base64 "chunk" or whatever it's called
 					exp := b[off:min(off+size, len(b))]
 					t.Run(fmt.Sprintf("%d+%d", off, size), func(t *testing.T) {
-						n, err := td.at.ReadAt(buf[:size], int64(off))
+						n, err := at.ReadAt(buf[:size], int64(off))
 						if err != nil && err != io.EOF {
 							t.Fatal(err)
 						} else if n != size && err != io.EOF {
