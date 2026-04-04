@@ -34,7 +34,7 @@ func (at At) ReadAt(p []byte, off int64) (int, error) {
 	} else {
 		p2 = p2[:n]
 	}
-	p2 = p2[subSkip : min(subLen, len(p2))]
+	p2 = p2[subSkip:min(subLen, len(p2))]
 	copy(p, p2) // TODO something clever to avoid this copy?? (bit trimming above?)
 	if len(p2) < len(p) {
 		return len(p2), io.EOF
