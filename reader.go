@@ -1,43 +1,41 @@
 package b64reader
 
 import (
+	"bytes"
 	"encoding/base64"
 	"io"
 )
 
 type At struct {
-	RA io.ReaderAt
+	io.ReaderAt
 }
 
 func (at At) ReadAt(p []byte, off int64) (int, error) {
 	enc := base64.StdEncoding
 
 	subStart := off / 3 * 4
-	subSkip := int(off * 4 % 3)
-	subLen := subSkip + len(p)
+	subSkip := off * 4 % 3
+	subLen := int(subSkip) + len(p)
 
 	buf := make([]byte, enc.EncodedLen(subLen))
 
-	if n, err := at.RA.ReadAt(buf, int64(subStart)); err != nil && err != io.EOF {
+	if n, err := at.ReaderAt.ReadAt(buf, subStart); err != nil && err != io.EOF {
 		return 0, err
 	} else if n < len(buf) {
 		buf = buf[:n]
 	}
-	// TODO clever bit math / shifting / handling?
-	p2 := make([]byte, enc.DecodedLen(len(buf)))
-	if n, err := enc.Decode(p2, buf); err != nil {
-		if _, isCorruptInputError := err.(base64.CorruptInputError); isCorruptInputError && n == subLen {
-			p2 = p2[:n]
-		} else {
-			return 0, err
-		}
-	} else {
-		p2 = p2[:n]
+
+	r := base64.NewDecoder(enc, bytes.NewReader(buf))
+
+	if _, err := io.CopyN(io.Discard, r, subSkip); err != nil {
+		return 0, err
 	}
-	p2 = p2[subSkip:min(subLen, len(p2))]
-	copy(p, p2) // TODO something clever to avoid this copy?? (bit trimming above?)
-	if len(p2) < len(p) {
-		return len(p2), io.EOF
+
+	// I really wish the stdlib had something like "io.ReadAtMost" (some combination of io.LimitedReader and io.ReadAll but into a provided buffer)
+	// I can emulate it with io.ReadAtLeast and converting io.ErrUnexpectedEOF into io.EOF, but it's hanky
+	n, err := io.ReadAtLeast(r, p, len(p))
+	if err == io.ErrUnexpectedEOF || n < len(p) {
+		err = io.EOF
 	}
-	return len(p2), nil
+	return n, err
 }
