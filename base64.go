@@ -10,7 +10,7 @@ import (
 // Base64ReaderAt is a wrapper around an existing [io.ReaderAt] that assumes the underlying data is base64-encoded and will transparently decode it during reads.  See also https://github.com/jonjohnsonjr/targz
 type Base64ReaderAt struct {
 	// R is the [io.ReaderAt] to ReadAt base64 data from
-	R   io.ReaderAt
+	R io.ReaderAt
 
 	// Enc is the [base64.Encoding] to use for decoding -- if unset, will default to [base64.StdEncoding] automatically
 	Enc *base64.Encoding
