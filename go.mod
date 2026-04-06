@@ -1,3 +1,3 @@
 module go.tianon.xyz/tio
 
-go 1.22
+go 1.24

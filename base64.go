@@ -8,7 +8,7 @@ import (
 )
 
 type Base64ReaderAt struct {
-	R io.ReaderAt
+	R   io.ReaderAt
 	Enc *base64.Encoding
 }
 
