@@ -1,4 +1,4 @@
-package b64reader
+package tio
 
 import (
 	"bytes"
@@ -17,12 +17,12 @@ func makeB64(size int) (b []byte, b64 []byte) {
 	return b, b64
 }
 
-func BenchmarkAt(b *testing.B) {
+func BenchmarkBase64ReaderAt(b *testing.B) {
 	for ex := range 13 {
 		kib := 1 << ex
 		b.Run(fmt.Sprintf("%dKiB", kib), func(b *testing.B) {
 			ogb, b64 := makeB64(kib * 1024)
-			at := At{bytes.NewReader(b64)}
+			at := Base64ReaderAt{R: bytes.NewReader(b64)}
 			buf := make([]byte, len(ogb)/4)
 			for b.Loop() {
 				at.ReadAt(buf, int64(len(ogb)/2))
@@ -31,7 +31,7 @@ func BenchmarkAt(b *testing.B) {
 	}
 }
 
-func TestReaderAt(t *testing.T) {
+func TestBase64ReaderAt(t *testing.T) {
 	b, b64 := makeB64(64)
 	buf := make([]byte, len(b)+5)
 	for extraLayers := range 10 {
@@ -40,9 +40,9 @@ func TestReaderAt(t *testing.T) {
 		for range extraLayers {
 			b64d = []byte(base64.StdEncoding.EncodeToString(b64d))
 		}
-		at = At{bytes.NewReader(b64d)}
+		at = Base64ReaderAt{R: bytes.NewReader(b64d)}
 		for range extraLayers {
-			at = At{at}
+			at = Base64ReaderAt{R: at}
 		}
 		t.Run(fmt.Sprintf("%d layers", 1+extraLayers), func(t *testing.T) {
 			for off := range len(b) + 1 { // +1 to make sure we test reading off the end

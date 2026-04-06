@@ -1,17 +1,19 @@
-package b64reader
+package tio
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/base64"
 	"io"
 )
 
-type At struct {
-	io.ReaderAt
+type Base64ReaderAt struct {
+	R io.ReaderAt
+	Enc *base64.Encoding
 }
 
-func (at At) ReadAt(p []byte, off int64) (int, error) {
-	enc := base64.StdEncoding
+func (at Base64ReaderAt) ReadAt(p []byte, off int64) (int, error) {
+	enc := cmp.Or(at.Enc, base64.StdEncoding)
 
 	subStart := off / 3 * 4
 	subSkip := off * 4 % 3
@@ -19,7 +21,7 @@ func (at At) ReadAt(p []byte, off int64) (int, error) {
 
 	buf := make([]byte, enc.EncodedLen(subLen))
 
-	if n, err := at.ReaderAt.ReadAt(buf, subStart); err != nil && err != io.EOF {
+	if n, err := at.R.ReadAt(buf, subStart); err != nil && err != io.EOF {
 		return 0, err
 	} else if n < len(buf) {
 		buf = buf[:n]
